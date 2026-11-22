@@ -8,6 +8,7 @@ import { THEME_LABEL, WEAKNESSES } from '../core/patterns.js';
 import { REPERTOIRE, PRINCIPLES, buildTree } from '../core/openings.js';
 import { ENDGAMES } from '../core/endgames.js';
 import { winPct } from '../core/analysis.js';
+import { explainGood, explainBad, nullMoveFen } from '../core/explain.js';
 import { el, esc, $, toast } from '../ui/dom.js';
 import { play } from '../ui/sound.js';
 
@@ -200,7 +201,9 @@ function review(root, params) {
       <h2>🔁 Repaso de tus errores <small id="rv-count"></small></h2>
       <div id="rv-status" class="status"></div>
       <div id="rv-info" class="small"></div>
+      <div id="rv-explain" class="explain hidden"></div>
       <div class="controls">
+        <button class="btn hidden" id="rv-retry">↺ Intentar de nuevo</button>
         <button class="btn" id="rv-sol">Ver solución</button>
         <button class="btn primary" id="rv-next" disabled>Siguiente ▶</button>
       </div>
@@ -216,7 +219,7 @@ function review(root, params) {
   let i = 0, cur = null;
   let okCount = 0;
   const board = new Board($('#board', node), {
-    canMove: (c) => cur && !cur.done && !cur.checking && c === cur.color,
+    canMove: (c) => cur && !cur.done && !cur.checking && !cur.showingRefutation && c === cur.color,
     onMove: (m) => onMove(m),
   });
 
@@ -225,14 +228,28 @@ function review(root, params) {
     const it = items[i];
     const chess = new Chess(it.fen);
     cur = { it, chess, color: chess.turn(), done: false, attempts: 0 };
+    // Amenaza del rival (qué haría si le tocara): se usa para explicar las jugadas defensivas.
+    const nf = nullMoveFen(it.fen);
+    cur.threat = nf ? analysisEngine().analyze(nf, { depth: 10, urgent: true })
+      .then((r) => ({ ...toWhitePov(r.lines[0], new Chess(nf).turn()), best: r.best, pv: r.lines[0] ? r.lines[0].pv : [] }))
+      .catch(() => null) : Promise.resolve(null);
     board.setOrientation(cur.color);
     board.setPosition(it.fen);
     board.setArrows([]);
+    showExplain(null);
+    $('#rv-retry', node).classList.add('hidden');
     $('#rv-count', node).textContent = `${i + 1}/${items.length}`;
     $('#rv-status', node).innerHTML = `Juegan las <b>${cur.color === 'w' ? 'blancas' : 'negras'}</b>. ¿Cuál es la mejor jugada?`;
     const tags = (it.tags || []).filter((t) => WEAKNESSES[t]).map((t) => WEAKNESSES[t].label);
     $('#rv-info', node).innerHTML = `<p class="muted">En tu partida jugaste <b>${esc(it.played)}</b>${tags.length ? ` (${esc(tags.join(', '))})` : ''}.</p>`;
     $('#rv-next', node).disabled = true;
+  }
+
+  function showExplain(html, kind = 'good') {
+    const box = $('#rv-explain', node);
+    if (!html) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+    box.className = `explain ${kind}`;
+    box.innerHTML = html;
   }
 
   async function onMove(m) {
@@ -241,22 +258,23 @@ function review(root, params) {
     let mv;
     try { mv = test.move(m); } catch { return; }
     board.setPosition(test.fen(), { from: m.from, to: m.to });
-    let ok = uci === cur.it.best;
-    if (!ok) {
-      cur.checking = true;
-      $('#rv-status', node).textContent = 'Comprobando tu jugada…';
-      try {
-        if (test.isCheckmate()) ok = true;
-        else {
-          const r = await analysisEngine().analyze(test.fen(), { depth: 12, urgent: true });
-          const ev = toWhitePov(r.lines[0], test.turn());
-          const after = winPct(ev, cur.color);
-          const before = winPct(cur.it.evalBefore, cur.color);
-          ok = before - after < 5;
-        }
-      } catch { ok = false; }
-      cur.checking = false;
-    }
+    const me = cur;
+    cur.checking = true;
+    $('#rv-status', node).textContent = 'Analizando tu jugada…';
+    showExplain(null);
+    let evAfter = null;
+    try {
+      if (test.isCheckmate()) evAfter = { mate: 0 };
+      else {
+        const r = await analysisEngine().analyze(test.fen(), { depth: 12, urgent: true });
+        evAfter = { ...toWhitePov(r.lines[0], test.turn()), best: r.best, pv: r.lines[0] ? r.lines[0].pv : [] };
+      }
+    } catch { evAfter = null; }
+    if (cur !== me) return;
+    cur.checking = false;
+    const before = cur.it.evalBefore;
+    let ok = uci === cur.it.best || test.isCheckmate();
+    if (!ok && evAfter) ok = winPct(before, cur.color) - winPct(evAfter, cur.color) < 5;
     cur.attempts++;
     if (ok) {
       cur.done = true;
@@ -266,12 +284,32 @@ function review(root, params) {
       $('#rv-status', node).innerHTML = uci === cur.it.best ? `✅ ¡Exacto! <b>${esc(mv.san)}</b> es la mejor jugada.` : `✅ <b>${esc(mv.san)}</b> también es muy buena. (La del motor: ${esc(cur.it.bestSan)})`;
       saveResult(first);
       $('#rv-next', node).disabled = false;
+      $('#rv-retry', node).classList.add('hidden');
+      const threat = await cur.threat;
+      if (cur !== me) return;
+      const lines = evAfter ? explainGood({ fen: cur.it.fen, uci, after: evAfter.mate === 0 ? { mate: 0 } : evAfter, threat, played: cur.it.played, playedLabels: (cur.it.tags || []).filter((t) => WEAKNESSES[t] && !['timePressure', 'impulsive'].includes(t)).map((t) => WEAKNESSES[t].label) }) : [];
+      if (lines.length) showExplain(`<b>¿Por qué funciona?</b><ul>${lines.map((l) => `<li>${esc(l)}</li>`).join('')}</ul>`, 'good');
     } else {
-      board.setPosition(cur.it.fen);
       play('wrong');
-      $('#rv-status', node).innerHTML = `❌ <b>${esc(mv.san)}</b> no es suficiente. Prueba otra vez.`;
       saveResult(false);
+      const { lines, replyUci } = evAfter ? explainBad({ fen: cur.it.fen, uci, after: evAfter, before, bestUci: cur.it.best }) : { lines: [], replyUci: null };
+      $('#rv-status', node).innerHTML = `❌ <b>${esc(mv.san)}</b> no es suficiente.`;
+      if (replyUci) {
+        cur.showingRefutation = true;
+        board.setArrows([{ from: replyUci.slice(0, 2), to: replyUci.slice(2, 4), kind: 'bad' }]);
+      } else board.setPosition(cur.it.fen);
+      showExplain(`<b>¿Por qué no funciona?</b><ul>${lines.map((l) => `<li>${esc(l)}</li>`).join('')}</ul>${replyUci ? '<p class="small muted">La flecha roja muestra la respuesta del rival.</p>' : ''}`, 'bad');
+      $('#rv-retry', node).classList.remove('hidden');
     }
+  }
+
+  function retry() {
+    if (!cur || cur.done) return;
+    cur.showingRefutation = false;
+    board.setArrows([]);
+    board.setPosition(cur.it.fen);
+    $('#rv-retry', node).classList.add('hidden');
+    $('#rv-status', node).innerHTML = `Juegan las <b>${cur.color === 'w' ? 'blancas' : 'negras'}</b>. Prueba otra jugada.`;
   }
 
   // Solo cuenta el primer intento.
@@ -292,12 +330,16 @@ function review(root, params) {
     if (!cur || cur.done) return;
     saveResult(false);
     const b = cur.it.best;
+    cur.showingRefutation = false;
+    $('#rv-retry', node).classList.add('hidden');
+    showExplain(null);
     board.setPosition(cur.it.fen);
     board.setArrows([{ from: b.slice(0, 2), to: b.slice(2, 4), kind: 'good' }]);
     $('#rv-status', node).innerHTML = `La mejor jugada era <b>${esc(cur.it.bestSan)}</b>. Juégala para continuar.`;
     cur.attempts++;
   };
   $('#rv-next', node).onclick = () => { i++; load(); };
+  $('#rv-retry', node).onclick = retry;
   load();
   return () => board.destroy();
 }

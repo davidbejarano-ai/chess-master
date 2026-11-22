@@ -159,3 +159,25 @@ test('importación de Chess.com', () => {
   assert.equal(rec.baseTime, 600);
   assert.equal(rec.userElo, 257);
 });
+
+test('explicaciones del repaso de errores', async () => {
+  const { explainGood, explainBad, nullMoveFen, lineToSan } = await import('../js/core/explain.js');
+  // Dama colgada en g4: capturarla
+  const fen = 'rnbqkbnr/ppp2ppp/8/3pp3/4P1Q1/8/PPPP1PPP/RNB1KBNR b KQkq - 1 3';
+  const good = explainGood({ fen, uci: 'c8g4', after: { cp: -900, best: 'g1f3', pv: ['g1f3'] }, played: 'Cf6', playedLabels: ['No capturas piezas gratis'] });
+  assert.ok(good[0].includes('Captura la dama de g4'), good.join(' | '));
+  assert.ok(good.some((l) => l.includes('posición ganadora')));
+  const bad = explainBad({ fen, uci: 'g8f6', after: { cp: -60, best: 'g4h4', pv: ['g4h4'] }, before: { cp: -900 }, bestUci: 'c8g4' });
+  assert.ok(bad.lines.some((l) => l.includes('pieza rival sin defensa')), bad.lines.join(' | '));
+  // Dama atacada por el caballo: perderla
+  const f2 = 'rnbqkb1r/pppp1ppp/5n2/4p2Q/4P3/8/PPPP1PPP/RNB1KBNR w KQkq - 2 3';
+  const b2 = explainBad({ fen: f2, uci: 'b1c3', after: { cp: -800, best: 'f6h5', pv: ['f6h5', 'g1f3'] }, before: { cp: 20 }, bestUci: 'h5e5' });
+  assert.ok(b2.lines[0].includes('captura tu dama de h5'), b2.lines.join(' | '));
+  assert.ok(b2.lines.some((l) => l.includes('piezas está atacada')));
+  assert.equal(b2.replyUci, 'f6h5');
+  // Mate en 1
+  const f3 = '6k1/5ppp/8/8/8/8/5PPP/3R2K1 w - - 0 1';
+  assert.ok(explainGood({ fen: f3, uci: 'd1d8', after: { mate: 0 } })[0].includes('jaque mate'));
+  assert.equal(nullMoveFen('4k3/8/8/8/8/8/8/R3K3 b - - 0 1'), '4k3/8/8/8/8/8/8/R3K3 w - - 0 1');
+  assert.equal(lineToSan('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', ['e2e4', 'e7e5']), '1.e4 e5');
+});

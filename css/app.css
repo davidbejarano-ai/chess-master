@@ -274,3 +274,7 @@ main { max-width: 1180px; margin: 0 auto; padding: 16px; }
 .bg-progress { position: fixed; right: 12px; bottom: 80px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; box-shadow: var(--shadow); z-index: 30; font-size: .85rem; width: 220px; }
 @media (min-width: 900px) { .bg-progress { bottom: 16px; } #toasts { bottom: 20px; } }
 .error { color: var(--danger); }
+
+.explain { padding: 10px 12px; border-radius: 10px; font-size: .93rem; border-left: 4px solid var(--cls-best); background: var(--surface-2); }
+.explain.bad { border-left-color: var(--cls-blunder); }
+.explain ul { margin: 6px 0 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: 4px; }
