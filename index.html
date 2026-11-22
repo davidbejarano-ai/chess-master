@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Chess Master</title>
+  <meta name="description" content="Juega, analiza tus partidas y entrena tus puntos débiles en ajedrez.">
+  <meta name="theme-color" content="#1f2a1f">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#/home" aria-label="Inicio">
+      <svg viewBox="0 0 40 40" aria-hidden="true"><use href="assets/pieces.svg#wn"/></svg>
+      <span>Chess Master</span>
+    </a>
+    <div class="top-stats" id="top-stats"></div>
+  </header>
+  <nav class="tabs" id="tabs" aria-label="Secciones">
+    <a href="#/home" data-tab="home"><span class="ic">🏠</span><span>Inicio</span></a>
+    <a href="#/play" data-tab="play"><span class="ic">♟</span><span>Jugar</span></a>
+    <a href="#/train" data-tab="train"><span class="ic">🎯</span><span>Entrenar</span></a>
+    <a href="#/games" data-tab="games"><span class="ic">📋</span><span>Partidas</span></a>
+    <a href="#/progress" data-tab="progress"><span class="ic">📈</span><span>Progreso</span></a>
+  </nav>
+  <main id="view" tabindex="-1"></main>
+  <div id="bg-progress" class="bg-progress hidden" role="status"></div>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
