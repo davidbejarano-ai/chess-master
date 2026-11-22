@@ -110,6 +110,8 @@ main { max-width: 1180px; margin: 0 auto; padding: 16px; }
 .seg.small button { padding: 5px 10px; font-size: .85rem; }
 
 .field { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; color: var(--ink-2); }
+.check { display: flex; align-items: center; gap: 8px; font-size: .95rem; }
+.check input { width: 20px; height: 20px; accent-color: var(--accent); }
 .field input, .field select { font: inherit; padding: 9px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); min-width: 140px; }
 
 /* Plan */

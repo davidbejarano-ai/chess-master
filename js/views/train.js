@@ -9,6 +9,7 @@ import { REPERTOIRE, PRINCIPLES, buildTree } from '../core/openings.js';
 import { ENDGAMES } from '../core/endgames.js';
 import { winPct } from '../core/analysis.js';
 import { el, esc, $, toast } from '../ui/dom.js';
+import { play } from '../ui/sound.js';
 
 export async function render(root, { sub, params }) {
   const mode = sub[0] || 'menu';
@@ -121,6 +122,7 @@ async function puzzles(root, params) {
     if (!ok) {
       board.setPosition(cur.chess.fen(), null);
       if (!cur.failed) { cur.failed = true; record(false); }
+      play('wrong');
       $('#pz-status', node).innerHTML = `❌ <b>${esc(mv.san)}</b> no es la solución. Inténtalo otra vez o mira la solución.`;
       return;
     }
@@ -153,6 +155,7 @@ async function puzzles(root, params) {
 
   function solved() {
     cur.finished = true;
+    setTimeout(() => play(cur.failed ? 'move' : 'correct'), 250);
     if (!cur.failed) record(true);
     $('#pz-status', node).innerHTML = cur.failed ? '✔ Completado (con error).' : `🎉 ¡Resuelto! Rating de puzzles: <b>${getState().puzzle.rating}</b>`;
     $('#pz-next', node).disabled = false;
@@ -259,11 +262,13 @@ function review(root, params) {
       cur.done = true;
       const first = cur.attempts === 1;
       if (first) okCount++;
+      setTimeout(() => play('correct'), 200);
       $('#rv-status', node).innerHTML = uci === cur.it.best ? `✅ ¡Exacto! <b>${esc(mv.san)}</b> es la mejor jugada.` : `✅ <b>${esc(mv.san)}</b> también es muy buena. (La del motor: ${esc(cur.it.bestSan)})`;
       saveResult(first);
       $('#rv-next', node).disabled = false;
     } else {
       board.setPosition(cur.it.fen);
+      play('wrong');
       $('#rv-status', node).innerHTML = `❌ <b>${esc(mv.san)}</b> no es suficiente. Prueba otra vez.`;
       saveResult(false);
     }
@@ -379,6 +384,7 @@ function openings(root, params) {
       board.setPosition(chess.fen(), null);
       const exp = new Chess(chess.fen()).move(expected.san);
       board.setArrows([{ from: exp.from, to: exp.to, kind: 'good' }]);
+      play('wrong');
       $('#op-status', node).innerHTML = `✋ <b>${esc(mv.san)}</b> no es la jugada del repertorio. Juega <b>${esc(expected.san)}</b>.`;
       $('#op-note', node).textContent = expected.note || '';
       return;
@@ -401,6 +407,7 @@ function openings(root, params) {
     });
     linesDone++;
     activity('opening');
+    setTimeout(() => play('correct'), 300);
     $('#op-status', node).innerHTML = `🎉 <b>Línea completada:</b> ${esc(name)} ${errors ? `(${errors} error${errors > 1 ? 'es' : ''})` : '¡sin errores!'}`;
     progressText();
     if (linesDone >= 3) { markBlockDone(params.block); toast('¡3 líneas practicadas! Bloque completado.', 'ok'); }
@@ -454,6 +461,7 @@ function endgames(root, params) {
 
   function end(success, msg) {
     cur.over = true;
+    setTimeout(() => play(success ? 'win' : 'end'), 300);
     $('#eg-status', node).innerHTML = `${success ? '🎉' : '❌'} ${msg}`;
     if (success) {
       update((s) => { const prev = s.endgames[cur.e.id] || {}; s.endgames[cur.e.id] = { done: true, best: Math.min(prev.best || 999, cur.moves) }; });

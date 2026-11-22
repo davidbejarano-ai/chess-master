@@ -7,6 +7,7 @@ import { getState, update } from '../storage.js';
 import { analyzeRecord, storeAnalyzed } from '../analyzer.js';
 import { getProfile, markBlockDone, activity } from '../services.js';
 import { el, esc, $, fmtClock, toast } from '../ui/dom.js';
+import { play } from '../ui/sound.js';
 
 const TIME_OPTIONS = [
   { id: '600', label: '10 min', base: 600, inc: 0 },
@@ -55,6 +56,7 @@ function renderSetup(root, params) {
     const color = choice.color === 'r' ? (Math.random() < 0.5 ? 'w' : 'b') : choice.color;
     const t = TIME_OPTIONS.find((x) => x.id === choice.time);
     game = newGame(color, t, botRating, params.block);
+    play('start');
     root.innerHTML = '';
     renderGame(root, params);
   };
@@ -251,6 +253,7 @@ function renderGame(root) {
     markBlockDone(g.block);
     activity('game');
     const label = score === 1 ? '🎉 ¡Ganaste!' : score === 0 ? 'Perdiste' : 'Tablas';
+    setTimeout(() => play(score === 1 ? 'win' : 'end'), 350);
     setStatus(`<b>${label}</b> · ${esc(reason)} · Rating ${newRating} (${delta >= 0 ? '+' : ''}${delta})<div class="bar"><i id="an-bar" style="width:0%"></i></div><small id="an-txt">Analizando tu partida…</small>`);
     board.setPosition(g.chess.fen(), lastMoveOf(g.chess));
     const rec = {
