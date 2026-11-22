@@ -9,6 +9,7 @@ export function render(root) {
       <form id="f" class="stack">
         <label class="field"><span>Usuario de Chess.com</span><input name="user" value="${esc(s.settings.chesscomUser)}"></label>
         <label class="field"><span>Rating en la app (ajústalo si el bot es muy fácil o difícil)</span><input name="rating" type="number" min="100" max="2500" value="${s.rating.user}"></label>
+        <label class="check"><input type="checkbox" name="sound" ${s.settings.sound !== false ? 'checked' : ''}> Sonidos al mover las piezas</label>
         <button class="btn primary" type="submit">Guardar</button>
       </form>
     </div>
@@ -32,6 +33,7 @@ export function render(root) {
     const f = new FormData(e.target);
     update((st) => {
       st.settings.chesscomUser = String(f.get('user')).trim();
+      st.settings.sound = f.get('sound') === 'on';
       const r = parseInt(f.get('rating'), 10);
       if (r >= 100 && r <= 2500) st.rating.user = r;
     });

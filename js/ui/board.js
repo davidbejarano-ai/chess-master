@@ -1,5 +1,6 @@
 // Tablero de ajedrez interactivo (clic o arrastrar), con flechas, resaltados y diálogo de coronación.
 import { Chess } from '../vendor/chess.js';
+import { play, playMove } from './sound.js';
 
 const FILES = 'abcdefgh';
 const PIECES_URL = new URL('../../assets/pieces.svg', import.meta.url).href;
@@ -64,10 +65,25 @@ export class Board {
   }
 
   setPosition(fen, lastMove = null) {
+    const prev = this.chess.fen();
+    if (lastMove && prev !== fen && this.opts.sound !== false) this._soundFor(prev, fen, lastMove);
     this.chess.load(fen);
     this.lastMove = lastMove;
     this.selected = null;
     this.render();
+  }
+
+  /** Reproduce el sonido de la jugada que lleva de `prev` a `fen`. */
+  _soundFor(prev, fen, lm) {
+    try {
+      const after = new Chess(fen);
+      const piece = after.get(lm.to);
+      const c = new Chess(prev);
+      const mv = c.move({ from: lm.from, to: lm.to, promotion: piece && piece.type !== 'p' && c.get(lm.from)?.type === 'p' ? piece.type : undefined });
+      playMove(mv, after.inCheck());
+    } catch {
+      play('move'); // salto de posición (p. ej. al navegar en la revisión)
+    }
   }
 
   setOrientation(c) { this.orientation = c; this.render(); }
@@ -167,6 +183,7 @@ export class Board {
     }
     if (this._canMovePiece(s)) {
       e.preventDefault();
+      if (this.selected !== s && this.opts.sound !== false) play('select');
       this.selected = s;
       this.render();
       const cell = this.boardEl.children[this._indexOf(s)];
@@ -205,7 +222,10 @@ export class Board {
       d.origin.style.opacity = '';
       const to = this._sqFromEvent(e);
       if (to && to !== d.from && this._dests(d.from).includes(to)) this._attempt(d.from, to);
-      else this.render();
+      else {
+        if (to && to !== d.from && this.opts.sound !== false) play('illegal');
+        this.render();
+      }
     }
   }
 
