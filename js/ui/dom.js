@@ -35,3 +35,17 @@ export function fmtDate(ts) {
 }
 
 export function pct(x) { return x === null || x === undefined ? '—' : `${Math.round(x)}%`; }
+
+/** Ventana emergente simple. */
+export function showModal(html) {
+  const d = document.createElement('dialog');
+  d.className = 'modal';
+  d.innerHTML = `<button class="modal-close" aria-label="Cerrar">✕</button><div class="modal-body">${html}</div>`;
+  document.body.appendChild(d);
+  const close = () => { d.close(); d.remove(); };
+  d.querySelector('.modal-close').onclick = close;
+  d.addEventListener('click', (e) => { if (e.target === d) close(); });
+  d.addEventListener('cancel', () => d.remove());
+  d.showModal();
+  return d;
+}

@@ -159,3 +159,55 @@ test('importación de Chess.com', () => {
   assert.equal(rec.baseTime, 600);
   assert.equal(rec.userElo, 257);
 });
+
+test('explicaciones del repaso de errores', async () => {
+  const { explainGood, explainBad, nullMoveFen, lineToSan } = await import('../js/core/explain.js');
+  // Dama colgada en g4: capturarla
+  const fen = 'rnbqkbnr/ppp2ppp/8/3pp3/4P1Q1/8/PPPP1PPP/RNB1KBNR b KQkq - 1 3';
+  const good = explainGood({ fen, uci: 'c8g4', after: { cp: -900, best: 'g1f3', pv: ['g1f3'] }, played: 'Cf6', playedLabels: ['No capturas piezas gratis'] });
+  assert.ok(good[0].includes('Captura la dama de g4'), good.join(' | '));
+  assert.ok(good.some((l) => l.includes('posición ganadora')));
+  const bad = explainBad({ fen, uci: 'g8f6', after: { cp: -60, best: 'g4h4', pv: ['g4h4'] }, before: { cp: -900 }, bestUci: 'c8g4' });
+  assert.ok(bad.lines.some((l) => l.includes('pieza rival sin defensa')), bad.lines.join(' | '));
+  // Dama atacada por el caballo: perderla
+  const f2 = 'rnbqkb1r/pppp1ppp/5n2/4p2Q/4P3/8/PPPP1PPP/RNB1KBNR w KQkq - 2 3';
+  const b2 = explainBad({ fen: f2, uci: 'b1c3', after: { cp: -800, best: 'f6h5', pv: ['f6h5', 'g1f3'] }, before: { cp: 20 }, bestUci: 'h5e5' });
+  assert.ok(b2.lines[0].includes('captura tu dama de h5'), b2.lines.join(' | '));
+  assert.ok(b2.lines.some((l) => l.includes('piezas está atacada')));
+  assert.equal(b2.replyUci, 'f6h5');
+  // Mate en 1
+  const f3 = '6k1/5ppp/8/8/8/8/5PPP/3R2K1 w - - 0 1';
+  assert.ok(explainGood({ fen: f3, uci: 'd1d8', after: { mate: 0 } })[0].includes('jaque mate'));
+  assert.equal(nullMoveFen('4k3/8/8/8/8/8/8/R3K3 b - - 0 1'), '4k3/8/8/8/8/8/8/R3K3 w - - 0 1');
+  assert.equal(lineToSan('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', ['e2e4', 'e7e5']), '1.e4 e5');
+});
+
+test('fichas de aperturas completas', async () => {
+  const { REPERTOIRE, OPENING_NAMES } = await import('../js/core/openings.js');
+  const { OPENING_INFO } = await import('../js/core/opening-info.js');
+  for (const c of ['w', 'b']) for (const l of REPERTOIRE[c].lines) assert.ok(OPENING_INFO[l.family], `${l.name} → ${l.family}`);
+  for (const [, name] of OPENING_NAMES) assert.ok(OPENING_INFO[name], name);
+  for (const [name, i] of Object.entries(OPENING_INFO)) {
+    assert.ok(i.tipo && i.resumen && i.origen && i.ideas.w.length && i.ideas.b.length && i.cuidado.length, name);
+    assert.ok(!/(?<![A-Za-zÁÉÍÓÚáéíóúñ])[CADT]x?[a-h][1-8]/.test(JSON.stringify(i)), `${name}: notación española mezclada`);
+  }
+});
+
+test('resumen de varias partidas', async () => {
+  const { buildReport } = await import('../js/core/report.js');
+  // 1.e4 d5 2.Qg4?? Bxg4 — y una partida donde el usuario (negras) aprovecha el error
+  const ucis = ['e2e4', 'd7d5', 'd1g4', 'c8g4'];
+  const evals = [{ cp: 30, best: 'e2e4' }, { cp: 30, best: 'd7d5' }, { cp: 40, best: 'e4d5' }, { cp: -900, best: 'c8g4', pv: ['c8g4'] }, { cp: -900, best: 'g1f3' }];
+  const mk = (id, color, result, date) => { const a = analyzeGame({ ucis, userColor: color, evals, result }); return { id, userColor: color, date, opponent: 'X', opening: 'Escandinava', moves: a.moves, summary: a.summary }; };
+  const r = buildReport([mk('a', 'w', '0-1', 1), mk('b', 'b', '0-1', 2)]);
+  assert.equal(r.games, 2);
+  assert.deepEqual(r.record, { w: 1, d: 0, l: 1 });
+  assert.equal(r.turning.worsened.length, 1);
+  assert.equal(r.turning.worsened[0].gameId, 'a');
+  assert.equal(r.turning.punished.length, 1);
+  assert.equal(r.turning.punished[0].gameId, 'b');
+  assert.ok(r.bestMoves.length >= 1);
+  assert.ok(r.errorTypes.some((e) => e.id === 'hanging'));
+  assert.ok(r.recommendations.length >= 2);
+  assert.equal(buildReport([]).games, 0);
+});

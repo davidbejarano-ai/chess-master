@@ -274,3 +274,33 @@ main { max-width: 1180px; margin: 0 auto; padding: 16px; }
 .bg-progress { position: fixed; right: 12px; bottom: 80px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; box-shadow: var(--shadow); z-index: 30; font-size: .85rem; width: 220px; }
 @media (min-width: 900px) { .bg-progress { bottom: 16px; } #toasts { bottom: 20px; } }
 .error { color: var(--danger); }
+
+.explain { padding: 10px 12px; border-radius: 10px; font-size: .93rem; border-left: 4px solid var(--cls-best); background: var(--surface-2); }
+.explain.bad { border-left-color: var(--cls-blunder); }
+.explain ul { margin: 6px 0 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: 4px; }
+
+.op-current:empty { display: none; }
+.op-now { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.opcard { margin-top: 8px; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); font-size: .92rem; }
+.opcard p { margin: 0 0 8px; }
+.opcard h4 { margin: 10px 0 4px; font-size: .9rem; }
+.opcard ul { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: 3px; }
+.op-type { font-weight: 700; color: var(--accent); }
+.op-variant { padding: 6px 8px; border-left: 3px solid var(--accent); background: var(--surface); border-radius: 6px; }
+.op-origin { color: var(--muted); font-size: .85rem; margin-top: 10px !important; }
+.lib-item { border-top: 1px solid var(--line); padding: 6px 0; }
+.lib-item summary { cursor: pointer; font-weight: 600; }
+.modal { border: 0; border-radius: 14px; padding: 18px 16px 16px; width: min(92vw, 560px); max-height: 85vh; background: var(--surface); color: var(--ink); box-shadow: 0 10px 40px rgba(0,0,0,.35); }
+.modal::backdrop { background: rgba(0,0,0,.45); }
+.modal-close { position: absolute; top: 8px; right: 10px; background: none; border: 0; font-size: 1.2rem; color: var(--ink-2); cursor: pointer; }
+
+#hint-info:empty { display: none; }
+
+.selbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 8px 0 10px; }
+.selbar #go-report { margin-left: auto; }
+.games tr.sel td { background: var(--accent-soft); }
+.pick { width: 18px; height: 18px; accent-color: var(--accent); }
+.recs { margin: 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: 6px; }
+.moments a { text-decoration: none; color: var(--ink); display: block; padding: 4px 6px; border-radius: 6px; }
+.moments a:hover { background: var(--accent-soft); }
+.moments a small { display: block; color: var(--muted); }

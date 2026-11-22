@@ -6,7 +6,7 @@ import { el, esc, $, $$, fmtDate, pct } from '../ui/dom.js';
 
 const CLS_ICON = { best: '★', excellent: '!', good: '✓', inaccuracy: '?!', mistake: '?', blunder: '??' };
 
-export function render(root, { sub }) {
+export function render(root, { sub, params = {} }) {
   const id = decodeURIComponent(sub[0] || '');
   const g = getState().games.find((x) => x.id === id);
   if (!g || !g.moves) {
@@ -72,8 +72,10 @@ export function render(root, { sub }) {
   const tmp = new Chess(g.moves[0].fenBefore);
   for (const m of g.moves) { tmp.move({ from: m.uci.slice(0, 2), to: m.uci.slice(2, 4), promotion: m.uci[4] }); fens.push(tmp.fen()); }
 
-  let idx = g.moves.length; // posición tras idx jugadas
-  let showBest = false;
+  // posición tras idx jugadas; con ?ply=N se abre en esa jugada mostrando la mejor alternativa
+  const startPly = params.ply !== undefined ? Math.max(0, Math.min(g.moves.length - 1, +params.ply)) : null;
+  let idx = startPly !== null ? startPly + 1 : g.moves.length;
+  let showBest = startPly !== null && g.moves[startPly].color === g.userColor && ['inaccuracy', 'mistake', 'blunder'].includes(g.moves[startPly].cls);
 
   // Lista de jugadas
   const ml = $('#moves', node);

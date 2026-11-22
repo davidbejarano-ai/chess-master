@@ -1,7 +1,9 @@
 import { getState } from '../storage.js';
 import { getProfile } from '../services.js';
 import { THEME_LABEL, PHASE_LABEL } from '../core/patterns.js';
-import { el, esc, pct, fmtDate } from '../ui/dom.js';
+import { el, esc, pct, fmtDate, showModal } from '../ui/dom.js';
+import { openingCardHtml } from '../ui/opening-card.js';
+import { openingInfo } from '../core/opening-info.js';
 
 export function render(root) {
   const s = getState();
@@ -70,7 +72,7 @@ export function render(root) {
       <div class="card">
         <h2>Aperturas</h2>
         ${p.openings.length ? `<table class="games"><thead><tr><th>Apertura</th><th>Partidas</th><th>Puntos</th></tr></thead><tbody>
-          ${p.openings.slice(0, 10).map((o) => `<tr><td>${esc(o.name)}</td><td>${o.games}</td><td>${o.pct}%</td></tr>`).join('')}</tbody></table>` : '<p class="muted">Sin datos.</p>'}
+          ${p.openings.slice(0, 10).map((o) => `<tr><td>${openingInfo(o.name) ? `<button class="link" data-op="${esc(o.name)}">${esc(o.name)} ℹ️</button>` : esc(o.name)}</td><td>${o.games}</td><td>${o.pct}%</td></tr>`).join('')}</tbody></table>` : '<p class="muted">Sin datos.</p>'}
       </div>
       <div class="card">
         <h2>Puzzles por tema</h2>
@@ -79,6 +81,14 @@ export function render(root) {
       </div>
     </div>
   </section>`));
+  openingClicks(root);
+}
+
+function openingClicks(root) {
+  root.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-op]');
+    if (b) showModal(`<h2>${esc(b.dataset.op)}</h2>${openingCardHtml(b.dataset.op)}`);
+  });
 }
 
 function chesscomLine(s) {
