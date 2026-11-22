@@ -293,3 +293,5 @@ main { max-width: 1180px; margin: 0 auto; padding: 16px; }
 .modal { border: 0; border-radius: 14px; padding: 18px 16px 16px; width: min(92vw, 560px); max-height: 85vh; background: var(--surface); color: var(--ink); box-shadow: 0 10px 40px rgba(0,0,0,.35); }
 .modal::backdrop { background: rgba(0,0,0,.45); }
 .modal-close { position: absolute; top: 8px; right: 10px; background: none; border: 0; font-size: 1.2rem; color: var(--ink-2); cursor: pointer; }
+
+#hint-info:empty { display: none; }

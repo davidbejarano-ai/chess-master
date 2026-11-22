@@ -83,14 +83,14 @@ function renderGame(root) {
       <div class="player bottom"><span class="name">🙂 Tú</span><span class="mat" id="mat-bot"></span><span class="clock" id="clk-bot"></span></div>
     </div>
     <aside class="side card">
-      <div class="status" id="status"></div>
-      <ol class="movelist" id="moves"></ol>
       <div class="controls">
         <button class="btn" id="hint" title="Pedir pista">💡 Pista</button>
         <button class="btn" id="flip" title="Girar tablero">⟲ Girar</button>
         <button class="btn danger" id="resign">🏳 Rendirse</button>
       </div>
       <div id="hint-info" class="muted small"></div>
+      <div class="status" id="status"></div>
+      <ol class="movelist" id="moves"></ol>
     </aside>
   </section>`);
   root.appendChild(node);
