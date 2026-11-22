@@ -9,6 +9,7 @@ import { REPERTOIRE, PRINCIPLES, buildTree } from '../core/openings.js';
 import { ENDGAMES } from '../core/endgames.js';
 import { winPct } from '../core/analysis.js';
 import { explainGood, explainBad, nullMoveFen } from '../core/explain.js';
+import { openingCardHtml, NOTATION_HELP } from '../ui/opening-card.js';
 import { el, esc, $, toast } from '../ui/dom.js';
 import { play } from '../ui/sound.js';
 
@@ -356,11 +357,14 @@ function openings(root, params) {
       <p class="muted small" id="op-rep"></p>
       <div id="op-status" class="status"></div>
       <div id="op-note" class="note"></div>
+      <div id="op-current" class="op-current"></div>
       <div class="controls"><button class="btn" id="op-restart">↺ Otra línea</button></div>
       <p class="muted small" id="op-progress"></p>
       <details class="principles"><summary>Principios de apertura</summary>
         <ul>${PRINCIPLES.map((p) => `<li><b>${esc(p.title)}:</b> ${esc(p.text)}</li>`).join('')}</ul>
       </details>
+      <details class="principles" id="op-library"><summary>📚 Conoce las aperturas de tu repertorio</summary><div id="op-lib"></div></details>
+      <p class="muted small">${esc(NOTATION_HELP)}</p>
     </aside>
   </section>`);
   root.appendChild(node);
@@ -388,12 +392,51 @@ function openings(root, params) {
     $('#op-rep', node).textContent = REPERTOIRE[color].name;
     $('#op-note', node).textContent = '';
     progressText();
+    renderLibrary();
     step();
+  }
+
+  const lineByName = (n) => REPERTOIRE[color].lines.find((l) => l.name === n);
+
+  /** Muestra qué apertura se está practicando, con botón para aprender más. */
+  function renderCurrent() {
+    const box = $('#op-current', node);
+    const names = nodeCur === tree ? REPERTOIRE[color].lines.map((l) => l.name) : nodeCur.lines;
+    const lines = names.map(lineByName).filter(Boolean);
+    const families = [...new Set(lines.map((l) => l.family))];
+    if (families.length !== 1) {
+      box.innerHTML = families.length <= 4 && nodeCur !== tree
+        ? `<small class="muted">Puede ser: ${families.map(esc).join(', ')}</small>`
+        : '<small class="muted">La apertura se definirá en las próximas jugadas.</small>';
+      return;
+    }
+    const fam = families[0];
+    const single = lines.length === 1 ? lines[0] : null;
+    const title = !single ? fam : single.name.includes(fam) ? single.name : `${single.name} (${fam})`;
+    const open = box.dataset.fam === fam && box.querySelector('.opcard');
+    box.dataset.fam = fam;
+    box.innerHTML = `<div class="op-now"><span>📖 Estás practicando: <b>${esc(title)}</b></span>
+      <button class="btn small" id="op-info">${open ? 'Ocultar' : 'ℹ️ ¿Qué es esta apertura?'}</button></div>
+      ${open ? openingCardHtml(fam, { color, variant: single && single.variant, lineName: single && single.name }) : ''}`;
+    $('#op-info', node).onclick = () => {
+      const showing = box.querySelector('.opcard');
+      if (showing) { box.innerHTML = ''; box.dataset.fam = ''; renderCurrent(); return; }
+      box.insertAdjacentHTML('beforeend', openingCardHtml(fam, { color, variant: single && single.variant, lineName: single && single.name }));
+      $('#op-info', node).textContent = 'Ocultar';
+    };
+  }
+
+  function renderLibrary() {
+    const fams = [];
+    for (const l of REPERTOIRE[color].lines) if (!fams.includes(l.family)) fams.push(l.family);
+    $('#op-lib', node).innerHTML = fams.map((f) => `<details class="lib-item"><summary>${esc(f)}</summary>${openingCardHtml(f, { color })}
+      ${REPERTOIRE[color].lines.filter((l) => l.family === f && l.variant).map((l) => `<p class="op-variant"><b>${esc(l.name)}:</b> ${esc(l.variant)}</p>`).join('')}</details>`).join('');
   }
 
   function myTurn() { return chess.turn() === color; }
 
   function step() {
+    renderCurrent();
     const kids = Object.values(nodeCur.children);
     if (!kids.length) return lineDone();
     if (myTurn()) {

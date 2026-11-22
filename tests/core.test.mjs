@@ -181,3 +181,14 @@ test('explicaciones del repaso de errores', async () => {
   assert.equal(nullMoveFen('4k3/8/8/8/8/8/8/R3K3 b - - 0 1'), '4k3/8/8/8/8/8/8/R3K3 w - - 0 1');
   assert.equal(lineToSan('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', ['e2e4', 'e7e5']), '1.e4 e5');
 });
+
+test('fichas de aperturas completas', async () => {
+  const { REPERTOIRE, OPENING_NAMES } = await import('../js/core/openings.js');
+  const { OPENING_INFO } = await import('../js/core/opening-info.js');
+  for (const c of ['w', 'b']) for (const l of REPERTOIRE[c].lines) assert.ok(OPENING_INFO[l.family], `${l.name} → ${l.family}`);
+  for (const [, name] of OPENING_NAMES) assert.ok(OPENING_INFO[name], name);
+  for (const [name, i] of Object.entries(OPENING_INFO)) {
+    assert.ok(i.tipo && i.resumen && i.origen && i.ideas.w.length && i.ideas.b.length && i.cuidado.length, name);
+    assert.ok(!/(?<![A-Za-zÁÉÍÓÚáéíóúñ])[CADT]x?[a-h][1-8]/.test(JSON.stringify(i)), `${name}: notación española mezclada`);
+  }
+});
