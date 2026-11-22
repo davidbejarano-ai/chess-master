@@ -194,7 +194,8 @@ async function puzzles(root, params) {
 /* ---------------- Repaso de errores ---------------- */
 function review(root, params) {
   const s = getState();
-  let items = params.game ? s.reviews.filter((r) => r.gameId === params.game) : dueReviews();
+  const gameSet = params.games ? new Set(params.games.split(',')) : params.game ? new Set([params.game]) : null;
+  let items = gameSet ? s.reviews.filter((r) => gameSet.has(r.gameId)).sort((a, b) => b.drop - a.drop) : dueReviews();
   items = items.slice(0, +params.count || 10);
   const node = el(`<section class="train-layout">
     <div class="board-col"><div id="board"></div></div>

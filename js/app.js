@@ -9,8 +9,9 @@ import * as review from './views/review.js';
 import * as progress from './views/progress.js';
 import * as train from './views/train.js';
 import * as settings from './views/settings.js';
+import * as report from './views/report.js';
 
-const routes = { home, play, games, review, progress, train, settings };
+const routes = { home, play, games, review, progress, train, settings, report };
 let cleanup = null;
 
 function parseHash() {
@@ -28,7 +29,7 @@ async function navigate() {
   const root = $('#view');
   root.innerHTML = '';
   root.className = 'view-' + name;
-  $$('#tabs a').forEach((a) => a.classList.toggle('active', a.dataset.tab === (name === 'review' ? 'games' : name)));
+  $$('#tabs a').forEach((a) => a.classList.toggle('active', a.dataset.tab === (name === 'review' || name === 'report' ? 'games' : name)));
   try {
     cleanup = (await view.render(root, { sub, params })) || null;
   } catch (e) {

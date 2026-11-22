@@ -192,3 +192,22 @@ test('fichas de aperturas completas', async () => {
     assert.ok(!/(?<![A-Za-zÁÉÍÓÚáéíóúñ])[CADT]x?[a-h][1-8]/.test(JSON.stringify(i)), `${name}: notación española mezclada`);
   }
 });
+
+test('resumen de varias partidas', async () => {
+  const { buildReport } = await import('../js/core/report.js');
+  // 1.e4 d5 2.Qg4?? Bxg4 — y una partida donde el usuario (negras) aprovecha el error
+  const ucis = ['e2e4', 'd7d5', 'd1g4', 'c8g4'];
+  const evals = [{ cp: 30, best: 'e2e4' }, { cp: 30, best: 'd7d5' }, { cp: 40, best: 'e4d5' }, { cp: -900, best: 'c8g4', pv: ['c8g4'] }, { cp: -900, best: 'g1f3' }];
+  const mk = (id, color, result, date) => { const a = analyzeGame({ ucis, userColor: color, evals, result }); return { id, userColor: color, date, opponent: 'X', opening: 'Escandinava', moves: a.moves, summary: a.summary }; };
+  const r = buildReport([mk('a', 'w', '0-1', 1), mk('b', 'b', '0-1', 2)]);
+  assert.equal(r.games, 2);
+  assert.deepEqual(r.record, { w: 1, d: 0, l: 1 });
+  assert.equal(r.turning.worsened.length, 1);
+  assert.equal(r.turning.worsened[0].gameId, 'a');
+  assert.equal(r.turning.punished.length, 1);
+  assert.equal(r.turning.punished[0].gameId, 'b');
+  assert.ok(r.bestMoves.length >= 1);
+  assert.ok(r.errorTypes.some((e) => e.id === 'hanging'));
+  assert.ok(r.recommendations.length >= 2);
+  assert.equal(buildReport([]).games, 0);
+});

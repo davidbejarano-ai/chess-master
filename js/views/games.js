@@ -2,6 +2,7 @@ import { getState, update } from '../storage.js';
 import { fetchRecentGames } from '../chesscom.js';
 import { queue } from '../analyzer.js';
 import { el, esc, $, fmtDate, toast } from '../ui/dom.js';
+import { getSelection, setSelection } from './report.js';
 
 export function render(root, { params }) {
   const s = getState();
@@ -25,6 +26,14 @@ export function render(root, { params }) {
       <div class="card-head"><h2>Tus partidas <small>${s.games.length}</small></h2>
         <div class="seg small" id="filter"><button data-v="all" class="on">Todas</button><button data-v="app">App</button><button data-v="chesscom">Chess.com</button></div>
       </div>
+      <div class="selbar" id="selbar">
+        <span class="muted small">Seleccionar:</span>
+        <button class="btn small" data-sel="10">Últimas 10</button>
+        <button class="btn small" data-sel="20">Últimas 20</button>
+        <button class="btn small" data-sel="all">Todas</button>
+        <button class="btn small" data-sel="none">Ninguna</button>
+        <button class="btn primary small" id="go-report" disabled>📊 Resumen</button>
+      </div>
       <div id="list"></div>
     </div>
   </section>`);
@@ -32,17 +41,27 @@ export function render(root, { params }) {
   if (params.import) setTimeout(() => $('input[name=user]', node).focus(), 50);
 
   let filter = 'all';
+  const selected = new Set(getSelection());
+  const visible = () => getState().games.slice().sort((a, b) => (b.date || 0) - (a.date || 0)).filter((g) => filter === 'all' || g.source === filter);
+  const updateSelBar = () => {
+    const n = [...selected].filter((id) => getState().games.some((g) => g.id === id && g.summary)).length;
+    const btn = $('#go-report', node);
+    btn.disabled = n === 0;
+    btn.textContent = n ? `📊 Resumen de ${n} partida${n > 1 ? 's' : ''}` : '📊 Resumen';
+    setSelection([...selected]);
+  };
   const drawList = () => {
-    const games = getState().games.slice().sort((a, b) => (b.date || 0) - (a.date || 0)).filter((g) => filter === 'all' || g.source === filter);
+    const games = visible();
     const pending = new Set(queue.items.map((x) => x.id));
     if (queue.current) pending.add(queue.current.id);
     $('#list', node).innerHTML = games.length ? `<table class="games">
-      <thead><tr><th>Fecha</th><th>Rival</th><th>Res.</th><th>Apertura</th><th>Precisión</th><th>Errores</th><th></th></tr></thead>
+      <thead><tr><th></th><th>Fecha</th><th>Rival</th><th>Res.</th><th>Apertura</th><th>Precisión</th><th>Errores</th><th></th></tr></thead>
       <tbody>${games.map((g) => {
         const sc = g.summary ? g.summary.userScore : scoreOf(g);
         const res = sc === 1 ? '<span class="res w">G</span>' : sc === 0 ? '<span class="res l">P</span>' : sc === 0.5 ? '<span class="res d">T</span>' : '·';
         const c = g.summary ? g.summary.counts : null;
-        return `<tr>
+        return `<tr class="${selected.has(g.id) ? 'sel' : ''}">
+          <td><input type="checkbox" class="pick" data-id="${esc(g.id)}" ${selected.has(g.id) ? 'checked' : ''} ${g.summary ? '' : 'disabled'} aria-label="Seleccionar partida"></td>
           <td>${fmtDate(g.date)}<small>${g.source === 'chesscom' ? 'Chess.com' : 'App'}${g.hintsUsed ? ' · 💡' + g.hintsUsed : ''}</small></td>
           <td>${g.userColor === 'w' ? '♔' : '♚'} ${esc(g.opponent || '')}${g.oppElo ? ` <small>(${g.oppElo})</small>` : ''}</td>
           <td>${res}</td>
@@ -56,6 +75,22 @@ export function render(root, { params }) {
       : '<p class="muted">Todavía no hay partidas. Importa desde Chess.com o juega contra el bot.</p>';
   };
   drawList();
+  updateSelBar();
+
+  $('#list', node).addEventListener('change', (e) => {
+    const cb = e.target.closest('.pick'); if (!cb) return;
+    if (cb.checked) selected.add(cb.dataset.id); else selected.delete(cb.dataset.id);
+    cb.closest('tr').classList.toggle('sel', cb.checked);
+    updateSelBar();
+  });
+  $('#selbar', node).addEventListener('click', (e) => {
+    const b = e.target.closest('[data-sel]'); if (!b) return;
+    const analyzed = visible().filter((g) => g.summary);
+    selected.clear();
+    if (b.dataset.sel !== 'none') (b.dataset.sel === 'all' ? analyzed : analyzed.slice(0, +b.dataset.sel)).forEach((g) => selected.add(g.id));
+    drawList(); updateSelBar();
+  });
+  $('#go-report', node).onclick = () => { setSelection([...selected]); location.hash = '#/report'; };
 
   $('#filter', node).addEventListener('click', (e) => {
     const b = e.target.closest('button'); if (!b) return;

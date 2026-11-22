@@ -295,3 +295,12 @@ main { max-width: 1180px; margin: 0 auto; padding: 16px; }
 .modal-close { position: absolute; top: 8px; right: 10px; background: none; border: 0; font-size: 1.2rem; color: var(--ink-2); cursor: pointer; }
 
 #hint-info:empty { display: none; }
+
+.selbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 8px 0 10px; }
+.selbar #go-report { margin-left: auto; }
+.games tr.sel td { background: var(--accent-soft); }
+.pick { width: 18px; height: 18px; accent-color: var(--accent); }
+.recs { margin: 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: 6px; }
+.moments a { text-decoration: none; color: var(--ink); display: block; padding: 4px 6px; border-radius: 6px; }
+.moments a:hover { background: var(--accent-soft); }
+.moments a small { display: block; color: var(--muted); }
